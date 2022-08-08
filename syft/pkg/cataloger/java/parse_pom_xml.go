@@ -44,7 +44,7 @@ func parsePomXMLProject(path string, reader io.Reader) (*pkg.PomProject, error) 
 }
 
 func newPomProject(path string, p gopom.Project) *pkg.PomProject {
-	return &pkg.PomProject{
+	proj := pkg.PomProject{
 		Path:        path,
 		Parent:      pomParent(p.Parent),
 		GroupID:     p.GroupID,
@@ -54,6 +54,15 @@ func newPomProject(path string, p gopom.Project) *pkg.PomProject {
 		Description: cleanDescription(p.Description),
 		URL:         p.URL,
 	}
+
+	if p.GroupID == "" {
+		proj.GroupID = p.Parent.GroupID
+	}
+
+	if p.Version == "" {
+		proj.Version = p.Parent.Version
+	}
+	return &proj
 }
 
 func newPackageFromPom(dep gopom.Dependency) *pkg.Package {
