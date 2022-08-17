@@ -44,7 +44,7 @@ type Cataloger interface {
 }
 
 // ImageCatalogers returns a slice of locally implemented catalogers that are fit for detecting installations of packages.
-func ImageCatalogers(cfg Config) []Cataloger {
+func ImageCatalogers(src *source.Source, cfg Config) []Cataloger {
 	return filterCatalogers([]Cataloger{
 		alpm.NewAlpmdbCataloger(),
 		ruby.NewGemSpecCataloger(),
@@ -53,7 +53,7 @@ func ImageCatalogers(cfg Config) []Cataloger {
 		javascript.NewJavascriptPackageCataloger(),
 		deb.NewDpkgdbCataloger(),
 		rpm.NewRpmdbCataloger(),
-		java.NewJavaCataloger(cfg.Java()),
+		java.NewJavaCataloger(src, cfg.Java()),
 		apkdb.NewApkdbCataloger(),
 		golang.NewGoModuleBinaryCataloger(),
 		dotnet.NewDotnetDepsCataloger(),
@@ -62,7 +62,7 @@ func ImageCatalogers(cfg Config) []Cataloger {
 }
 
 // DirectoryCatalogers returns a slice of locally implemented catalogers that are fit for detecting packages from index files (and select installations)
-func DirectoryCatalogers(cfg Config) []Cataloger {
+func DirectoryCatalogers(src *source.Source, cfg Config) []Cataloger {
 	return filterCatalogers([]Cataloger{
 		alpm.NewAlpmdbCataloger(),
 		ruby.NewGemFileLockCataloger(),
@@ -73,11 +73,11 @@ func DirectoryCatalogers(cfg Config) []Cataloger {
 		deb.NewDpkgdbCataloger(),
 		rpm.NewRpmdbCataloger(),
 		rpm.NewFileCataloger(),
-		java.NewJavaCataloger(cfg.Java()),
+		java.NewJavaCataloger(src, cfg.Java()),
 		java.NewJavaPomCataloger(),
 		apkdb.NewApkdbCataloger(),
 		golang.NewGoModuleBinaryCataloger(),
-		golang.NewGoModFileCataloger(),
+		golang.NewGoModFileCataloger(src, cfg.Go()),
 		rust.NewCargoLockCataloger(),
 		dart.NewPubspecLockCataloger(),
 		dotnet.NewDotnetDepsCataloger(),
@@ -89,7 +89,7 @@ func DirectoryCatalogers(cfg Config) []Cataloger {
 }
 
 // AllCatalogers returns all implemented catalogers
-func AllCatalogers(cfg Config) []Cataloger {
+func AllCatalogers(src *source.Source, cfg Config) []Cataloger {
 	return filterCatalogers([]Cataloger{
 		alpm.NewAlpmdbCataloger(),
 		ruby.NewGemFileLockCataloger(),
@@ -101,11 +101,11 @@ func AllCatalogers(cfg Config) []Cataloger {
 		deb.NewDpkgdbCataloger(),
 		rpm.NewRpmdbCataloger(),
 		rpm.NewFileCataloger(),
-		java.NewJavaCataloger(cfg.Java()),
+		java.NewJavaCataloger(src, cfg.Java()),
 		java.NewJavaPomCataloger(),
 		apkdb.NewApkdbCataloger(),
 		golang.NewGoModuleBinaryCataloger(),
-		golang.NewGoModFileCataloger(),
+		golang.NewGoModFileCataloger(src, cfg.Go()),
 		rust.NewCargoLockCataloger(),
 		rust.NewRustAuditBinaryCataloger(),
 		dart.NewPubspecLockCataloger(),
