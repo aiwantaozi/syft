@@ -256,8 +256,8 @@ func (p *scaffoldingGoModuleParser) runListRelationship(ctx context.Context) (io
 }
 
 func (p *scaffoldingGoModuleParser) runModuleWhy(ctx context.Context) (io.Reader, error) {
-	// go mod why -m all
-	args := "mod why -m all"
+	// go mod why -vendor -m all
+	args := "mod why -vendor -m all"
 	return command.RunCommand(ctx, p.command, p.currentFileDir, strings.Split(args, " ")...)
 }
 
