@@ -70,13 +70,13 @@ func (p *scaffoldingGoModuleParser) parse() ([]*pkg.Package, []artifact.Relation
 		return nil, nil, err
 	}
 
-	filteredModuleMap, pkgs, err := p.filterModules(ctx, moduleMap, curModule, curPkg)
+	filteredModules, pkgs, err := p.filterModules(ctx, moduleMap, curModule, curPkg)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	log.Info("generating dependency tree for %s", p.currentFilepath)
-	relationships, err := p.parseModuleRelationships(ctx, curModule, curPkg, curRelation, filteredModuleMap)
+	relationships, err := p.parseModuleRelationships(ctx, curModule, curPkg, curRelation, filteredModules)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -132,13 +132,17 @@ func (p *scaffoldingGoModuleParser) parseAllModules(ctx context.Context) (module
 		if modules == nil {
 			modules = make(map[string]*Module)
 		}
-		modules[m.String()] = m
+
+		if _, ok := modules[m.Path]; ok {
+			fmt.Println("already exited")
+		}
+		modules[m.Path] = m
 	}
 
 	return modules, nil
 }
 
-func (p *scaffoldingGoModuleParser) filterModules(ctx context.Context, moduleMap map[string]*Module, curModule *Module, curPkg *pkg.Package) (map[string]*Module, []*pkg.Package, error) {
+func (p *scaffoldingGoModuleParser) filterModules(ctx context.Context, moduleMap map[string]*Module, curModule *Module, curPkg *pkg.Package) ([]*Module, []*pkg.Package, error) {
 	buf, err := p.runModuleWhy(ctx)
 	if err != nil {
 		return nil, nil, err
@@ -162,12 +166,11 @@ func (p *scaffoldingGoModuleParser) filterModules(ctx context.Context, moduleMap
 		moduleWhyPkgs[currentModule] = append(moduleWhyPkgs[currentModule], line)
 	}
 
-	var filteredModuleMap = make(map[string]*Module)
+	var filteredModules []*Module
 	var pkgs = []*pkg.Package{curPkg}
 	for _, v := range moduleMap {
 		if ps, ok := moduleWhyPkgs[v.Path]; ok && len(ps) != 0 {
-			filteredModuleMap[v.String()] = v
-
+			filteredModules = append(filteredModules, v)
 			// skip main since we already append curPkg to pkgs
 			if v.Main {
 				continue
@@ -176,7 +179,7 @@ func (p *scaffoldingGoModuleParser) filterModules(ctx context.Context, moduleMap
 		}
 	}
 
-	return filteredModuleMap, pkgs, nil
+	return filteredModules, pkgs, nil
 }
 
 func (p *scaffoldingGoModuleParser) parseModuleRelationships(
@@ -184,7 +187,7 @@ func (p *scaffoldingGoModuleParser) parseModuleRelationships(
 	curModule *Module,
 	curPkg *pkg.Package,
 	relation *artifact.Relationship,
-	moduleMap map[string]*Module,
+	modules []*Module,
 ) (relationships []artifact.Relationship, err error) {
 
 	relationships = append(relationships, *relation)
@@ -195,21 +198,24 @@ func (p *scaffoldingGoModuleParser) parseModuleRelationships(
 
 	scanner := bufio.NewScanner(buf)
 	for scanner.Scan() {
-		modules := strings.Fields(strings.TrimSpace(scanner.Text()))
-		if len(modules) != 2 {
+		fields := strings.Fields(strings.TrimSpace(scanner.Text()))
+		if len(fields) != 2 {
 			log.Warn("invalid go mod dependency relationship %s", scanner.Text())
 			continue
 		}
 
-		from := modules[0]
-		to := modules[1]
-		fromModule, ok := moduleMap[from]
-		if !ok {
+		from := fields[0]
+		to := fields[1]
+		fromModule := findModule(modules, from, true)
+		if fromModule == nil {
 			continue
 		}
 
-		toModule, ok := moduleMap[to]
-		if !ok {
+		// Go's use minimal version selection strategy to decide final used version, when packages in project depends on multiple version.
+		// But in go mod graph, may show the relation with older version, the replaced final version may not present,
+		// so we query with non-strict mode.
+		toModule := findModule(modules, to, false)
+		if toModule == nil {
 			continue
 		}
 

@@ -1,6 +1,9 @@
 package golang
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 type Module struct {
 	ModuleInfo
@@ -20,4 +23,13 @@ func (m *Module) String() string {
 		return m.Path
 	}
 	return fmt.Sprintf("%s@%s", m.Path, m.Version)
+}
+
+func findModule(modules []*Module, query string, strict bool) *Module {
+	for i := range modules {
+		if query == modules[i].String() || (!strict && strings.HasPrefix(query, modules[i].Path+"@")) {
+			return modules[i]
+		}
+	}
+	return nil
 }
